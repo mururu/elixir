@@ -1283,10 +1283,15 @@ do_compile_beam(Module,Beam,UserOptions) ->
             Forms0 = epp:interpret_file_attribute(Code),
 	    {Forms,Vars} = transform(Vsn, Forms0, Module, Beam),
 
+	    %% We need to recover the source from the compilation
+	    %% info otherwise the newly compiled module will have
+	    %% source pointing to the current directory
+	    SourceInfo = get_source_info(Module, Beam),
+
 	    %% Compile and load the result
 	    %% It's necessary to check the result of loading since it may
 	    %% fail, for example if Module resides in a sticky directory
-	    {ok, Module, Binary} = compile:forms(Forms, UserOptions),
+	    {ok, Module, Binary} = compile:forms(Forms, SourceInfo ++ UserOptions),
 	    case code:load_binary(Module, ?TAG, Binary) of
 		{module, Module} ->
 		    
@@ -1312,6 +1317,17 @@ get_abstract_code(Module, Beam) ->
 	{error,beam_lib,{key_missing_or_invalid,_,_}} ->
 	    encrypted_abstract_code;
 	Error -> Error
+    end.
+
+get_source_info(Module, Beam) ->
+    case beam_lib:chunks(Beam, [compile_info]) of
+	{ok, {Module, [{compile_info, Compile}]}} ->
+		case lists:keyfind(source, 1, Compile) of
+			{ source, _ } = Tuple -> [Tuple];
+			false -> []
+		end;
+	_ ->
+		[]
     end.
 
 transform(Vsn, Code, Module, Beam) when Vsn=:=abstract_v1; Vsn=:=abstract_v2 ->
@@ -1856,7 +1872,7 @@ move_clauses([]) ->
 
 %% Given a .beam file, find the .erl file. Look first in same directory as
 %% the .beam file, then in <beamdir>/../src
-find_source(File0) ->
+find_source(Module, File0) ->
     case filename:rootname(File0,".beam") of
 	File0 ->
 	    File0;
@@ -1873,10 +1889,26 @@ find_source(File0) ->
 			true ->
 			    InDotDotSrc;
 			false ->
-			    {beam,File0}
+			    find_source_from_module(Module, File)
 		    end
 	    end
     end.
+
+%% In case we can't find the file from the beam file
+%% we try to get the information directly from the module source
+find_source_from_module(Module, File) ->
+    Compile = Module:module_info(compile),
+    case lists:keyfind(source, 1, Compile) of
+	{ source, Path } ->
+	    case filelib:is_file(Path) of
+		true ->
+		    Path;
+		false ->
+		    { beam, File }
+	    end;
+	false ->
+		{ beam, File }
+	end.
 
 do_parallel_analysis(Module, Analysis, Level, Loaded, From, State) ->
     analyse_info(Module,State#main_state.imported),
@@ -1981,7 +2013,7 @@ do_parallel_analysis_to_file(Module, OutFile, Opts, Loaded, From, State) ->
 	       {imported, File0, _} ->
 		   File0
 	   end,
-    case find_source(File) of
+    case find_source(Module, File) of
 	{beam,_BeamFile} ->
 	    reply(From, {error,no_source_code_found});
 	ErlFile ->
