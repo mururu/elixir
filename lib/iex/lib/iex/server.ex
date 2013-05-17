@@ -18,7 +18,7 @@ defmodule IEx.Server do
         { result, new_binding, scope } =
           :elixir.eval(code, config.binding, counter, config.scope)
 
-        io_put result
+        io_put config.device, result
 
         config = config.result(result)
         update_history(config.cache(code).scope(nil))
@@ -66,15 +66,15 @@ defmodule IEx.Server do
       else
         "#{prefix || "iex"}(#{config.counter})> "
       end
-
-    case IO.gets(:stdio, prompt) do
+    case IO.gets(config.device, prompt) do
+      :eof -> exit(:normal)
       { :error, _ } -> ''
       data -> :unicode.characters_to_list(data)
     end
   end
 
-  defp io_put(result) do
-    IO.puts :stdio, IO.ANSI.escape("%{yellow}#{inspect(result, IEx.inspect_opts)}")
+  defp io_put(device,result) do
+    IO.puts device, IO.ANSI.escape("%{yellow}#{inspect(result, IEx.inspect_opts)}")
   end
 
   defp io_error(result) do

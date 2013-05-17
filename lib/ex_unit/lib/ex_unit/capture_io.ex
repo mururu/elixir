@@ -41,17 +41,17 @@ defmodule ExUnit.CaptureIO do
       true
 
   """
-  def capture_io(device // :group_leader, fun) when is_atom(device) do
-    do_capture_io(map_dev(device), fun)
+  def capture_io(device // :group_leader, opts // [], fun) when is_atom(device) do
+    do_capture_io(map_dev(device), fun, opts)
   end
 
   defp map_dev(:stdio),  do: :standard_io
   defp map_dev(:stderr), do: :standard_error
   defp map_dev(other),   do: other
 
-  defp do_capture_io(:group_leader, fun) do
+  defp do_capture_io(:group_leader, fun, opts) do
     original_gl = :erlang.group_leader
-    capture_gl = new_group_leader(self)
+    capture_gl = new_group_leader(self, opts)
     :erlang.group_leader(capture_gl, self)
 
     try do
@@ -66,13 +66,13 @@ defmodule ExUnit.CaptureIO do
     end
   end
 
-  defp do_capture_io(device, fun) do
+  defp do_capture_io(device, fun, opts) do
     unless original_io = Process.whereis(device) do
       raise "could not find IO device registered at #{inspect device}"
     end
 
     Process.unregister(device)
-    capture_io = new_group_leader(self)
+    capture_io = new_group_leader(self, opts)
     Process.register(capture_io, device)
 
     try do
@@ -88,12 +88,28 @@ defmodule ExUnit.CaptureIO do
     end
   end
 
-  defp new_group_leader(runner) do
-    spawn_link(fn -> group_leader_process(runner) end)
+  defp new_group_leader(runner, opts) do
+    spawn_link(fn -> group_leader_process(runner, opts) end)
   end
 
-  defp group_leader_process(runner) do
+  defp group_leader_process(runner, opts) do
+    set_mock(opts[:mocks])
     group_leader_loop(runner, :infinity, [])
+  end
+
+  defp set_mock(mocks) do
+    Process.put(:mocks, (mocks || []))
+  end
+
+  defp get_mock do
+    mocks = Process.get(:mocks)
+    case mocks do
+      [] ->
+        :eof
+      [mock|t] ->
+        Process.put(:mocks, t)
+        mock
+    end
   end
 
   defp group_leader_loop(runner, wait, buf) do
@@ -151,11 +167,11 @@ defmodule ExUnit.CaptureIO do
   end
 
   defp io_request({ :get_line, _prompt }, buf) do
-    { :eof, buf }
+    { get_mock, buf }
   end
 
   defp io_request({ :get_line, _enc, _prompt }, buf) do
-    { :eof, buf }
+    { get_mock, buf }
   end
 
   defp io_request({ :get_until, _prompt, _m, _f, _as }, buf) do

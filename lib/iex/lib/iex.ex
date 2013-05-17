@@ -1,4 +1,4 @@
-defrecord IEx.Config, binding: nil, cache: '', counter: 1, scope: nil, result: nil
+defrecord IEx.Config, binding: nil, cache: '', counter: 1, scope: nil, result: nil, device: :stdio
 
 defmodule IEx do
   @moduledoc """
