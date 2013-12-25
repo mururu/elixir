@@ -1111,6 +1111,63 @@ defmodule Enum do
   end
 
   @doc """
+  Returns a random element from the non-empty collection.
+  Returns `{ :ok, element }` if the collection is not empty, 
+  otherwise `:error`.
+
+  Notice that you need to explicitly call `:random.seed/1` and
+  set a seed value for the random algorithm. Otherwise, the
+  default seed will be set which will always return the same
+  result. For example, one could do the following to set a seed
+  dynamically:
+
+      :random.seed(:erlang.now)
+
+  ## Examples
+
+      iex(1)> Enum.random([1, 2, 3])
+      { :ok, 2 }
+      iex(2)> Enum.random([1, 2, 3])
+      { :ok, 3 }
+
+  """
+  @spec random(t) :: { :ok, element } | :error
+  def random(collection) do
+    case count(collection) do
+      0 -> :error
+      n -> fetch(collection, :random.uniform(n) - 1)
+    end
+  end
+
+  @doc """
+  Returns a random element from the non-empty collection.
+  Raises Enum.EmptyError if the collection is empty.
+
+  Notice that you need to explicitly call `:random.seed/1` and
+  set a seed value for the random algorithm. Otherwise, the
+  default seed will be set which will always return the same
+  result. For example, one could do the following to set a seed
+  dynamically:
+
+      :random.seed(:erlang.now)
+
+  ## Examples
+
+      iex(1)> Enum.random!([1, 2, 3])
+      2
+      iex(2)> Enum.random!([1, 2, 3])
+      3
+
+  """
+  @spec random!(t) :: element | no_return
+  def random!(collection) do
+    case random(collection) do
+      { :ok, h } -> h
+      :error     -> raise Enum.EmptyError
+    end
+  end
+
+  @doc """
   Invokes `fun` for each element in the collection passing that element and the
   accumulator `acc` as arguments. `fun`'s return value is stored in `acc`.
   Returns the accumulator.

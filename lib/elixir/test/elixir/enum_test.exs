@@ -170,6 +170,21 @@ defmodule EnumTest.List do
     assert Enum.flat_map([1, 2, 3], fn(x) -> x..x+1 end) == [1, 2, 2, 3, 3, 4]
   end
 
+  test :random do
+    # set a fixed seed so the test can be deterministic
+    :random.seed(1374, 347975, 449264)
+    assert Enum.random([1, 2, 3, 4, 5]) == { :ok, 3 } 
+  end
+
+  test :random! do
+    # set a fixed seed so the test can be deterministic
+    :random.seed(1374, 347975, 449264)
+    assert Enum.random!([1, 2, 3, 4, 5]) == 3 
+    assert_raise Enum.EmptyError, fn ->
+      Enum.random!([])
+    end
+  end
+
   test :reduce do
     assert Enum.reduce([], 1, fn(x, acc) -> x + acc end) == 1
     assert Enum.reduce([1, 2, 3], 1, fn(x, acc) -> x + acc end) == 7
@@ -576,6 +591,20 @@ defmodule EnumTest.Range do
   test :flat_map do
     range = 1..3
     assert Enum.flat_map(range, fn(x) -> [x, x] end) == [1, 1, 2, 2, 3, 3]
+  end
+
+  test :random do
+    # set a fixed seed so the test can be deterministic
+    :random.seed(1374, 347975, 449264)
+    range = 1..5
+    assert Enum.random(range) == { :ok, 3 } 
+  end
+
+  test :random! do
+    # set a fixed seed so the test can be deterministic
+    :random.seed(1374, 347975, 449264)
+    range = 1..5
+    assert Enum.random!(range) == 3 
   end
 
   test :reduce do
