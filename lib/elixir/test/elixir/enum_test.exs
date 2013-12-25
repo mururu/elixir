@@ -239,6 +239,14 @@ defmodule EnumTest.List do
     assert Enum.scan([], 0, &(&1 + &2)) == []
   end
 
+  test :sample do
+    # set a fixed seed so the test can be deterministic
+    :random.seed(1374, 347975, 449264)
+    assert Enum.sample([1,2,3,4,5], 0) == []
+    assert Enum.sample([1,2,3,4,5], 3) == [3, 1, 2]
+    assert Enum.sample([1,2,3,4,5], 6) == [4, 3, 2, 5, 1]
+  end
+
   test :shuffle do
     # set a fixed seed so the test can be deterministic
     :random.seed(1374, 347975, 449264)
@@ -642,6 +650,15 @@ defmodule EnumTest.Range do
   test :partition do
     range = 1..3
     assert Enum.partition(range, fn(x) -> rem(x, 2) == 0 end) == { [2], [1, 3] }
+  end
+
+  test :sample do
+    # set a fixed seed so the test can be deterministic
+    :random.seed(1374, 347975, 449264)
+    range = 1..5
+    assert Enum.sample(range, 0) == []
+    assert Enum.sample(range, 3) == [3, 1, 2]
+    assert Enum.sample(range, 6) == [4, 3, 2, 5, 1]
   end
 
   test :scan do

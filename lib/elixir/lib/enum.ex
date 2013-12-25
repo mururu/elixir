@@ -1226,6 +1226,30 @@ defmodule Enum do
   end
 
   @doc """
+  Returns a list of unique elements randomly chosen from the collection.
+
+  Notice that you need to explicitly call `:random.seed/1` and
+  set a seed value for the random algorithm. Otherwise, the
+  default seed will be set which will always return the same
+  result. For example, one could do the following to set a seed
+  dynamically:
+
+      :random.seed(:erlang.now)
+
+  ## Examples
+
+      iex(1)> Enum.sample([1, 2, 3], 2)
+      [3, 2]
+      iex(2)> Enum.sample([1, 2, 3], 2)
+      [3, 1]
+
+  """
+  @spec sample(t, non_neg_integer) :: list
+  def sample(collection, n) when n >= 0 do
+    shuffle(collection) |> slice(0, n)
+  end
+
+  @doc """
   Applies the given function to each element in the collection,
   storing the result in a list and passing it as the accumulator
   for the next computation.
